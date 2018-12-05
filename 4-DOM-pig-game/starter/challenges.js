@@ -9,7 +9,7 @@ GAME RULES:
 
 */
 
-var scores, roundScore, activePlayer, gamePlaying;
+var scores, roundScore, activePlayer, gamePlaying, prevDice, lastPlusCurrent;
 
 init();
 
@@ -27,20 +27,38 @@ init();
 document.querySelector('.btn-roll').addEventListener("click", function () {
     if(gamePlaying) {
             //1. random number
-        var dice = Math.floor(Math.random() * 6) + 1;  //assigns random number to dice variable
+        var dice1 = Math.floor(Math.random() * 6) + 1;  //assigns random number to dice variable
+        var dice2 = Math.floor(Math.random() * 6) + 1
+
+        lastPlusCurrent = prevDice + dice;
+
         //2. display the result
-        var diceDOM = document.querySelector('.dice'); // reads the img src from the dice class in the html file and assigns to the diceDOM variable
-        diceDOM.style.display = 'block';  // sets dice class to display
-        diceDOM.src = 'dice-' + dice + '.png';  // assigns the dice value to the dice image
+        //. var diceDOM = document.querySelector('.dice'); // reads the img src from the dice class in the html file and assigns to the diceDOM variable
+        document.getElementById('.dice-1').style.display = "block"
+        document.getElementById('.dice-2').style.display = "block"
+
+        // diceDOM.style.display = 'block';  // sets dice class to display
+        document.ElementById('.dice-1').src = 'dice-' + dice1 + '.png';  // assigns the dice value to the dice image
+        document.ElementById('.dice-2').src = 'dice-' + dice2 + '.png';
 
         //3.  update the round score IF the rolled number was NOT a 1
 
-        if (dice !== 1) {
+        
+
+        if (dice !== 1 && lastPlusCurrent !== 12) {
             // Add score
+            prevDice = dice
             roundScore += dice;
             document.querySelector('#current-' + activePlayer).textContent = roundScore;
+            console.log(dice, prevDice);
+        } else if (lastPlusCurrent === 12) {
+            scores[activePlayer] = 0;
+            document.querySelector('#score-' + activePlayer).textContent = '0';
+            nextPlayer();
+            console.log(dice, prevDice)
         } else {
             //next player
+            console.log(dice, prevDice)
             nextPlayer();
             // activePlayer === 0 ? activePlayer = 1 : activePlayer = 0;
             // roundScore = 0;
@@ -70,7 +88,18 @@ document.querySelector('.btn-hold').addEventListener("click", function() {
         document.querySelector('#score-' + activePlayer).textContent = scores[activePlayer];
 
         // Check if player won the game
-        if (scores[activePlayer] >= 100) {
+        var input = document.querySelector('.final-score').value;
+        console.log(input);
+        var winningScore;
+        
+        if(input) {
+            var winningScore = input;
+        } else {
+            winningScore = 100;
+        }
+
+        console.log(input);
+        if (scores[activePlayer] >= winningScore) {
             document.querySelector('#name-' + activePlayer).textContent = 'Winner!';
             document.querySelector('.dice').style.display = 'none';
             document.querySelector('.player-' + activePlayer + '-panel').classList.add('winner');
@@ -86,6 +115,7 @@ document.querySelector('.btn-hold').addEventListener("click", function() {
 function nextPlayer() {
     activePlayer === 0 ? activePlayer = 1 : activePlayer = 0;
     roundScore = 0;
+    prevDice = 0;
 
     document.getElementById('current-0').textContent = '0';
     document.getElementById('current-1').textContent = '0';
@@ -103,6 +133,8 @@ document.querySelector('.btn-new').addEventListener("click", init);
     activePlayer = 0;
     roundScore = 0;
     gamePlaying = true;
+    gameMax = 0;
+    
     document.querySelector('.dice').style.display = 'none';
 
     document.getElementById('score-0').textContent = '0';
