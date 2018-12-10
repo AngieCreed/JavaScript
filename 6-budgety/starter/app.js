@@ -64,6 +64,17 @@ var budgetController = (function() {
         this.value = value;
     };
 
+    var calculateTotal = function(type) {
+        var sum = 0;
+        data.allItems[type].forEach(function(cur) {
+            sum += cur.value;
+        })
+        // cur refers to either the income or expense object that is stored
+        // at the current position of the expense or income array
+        data.totals[type] = sum
+        
+    }
+
     
        var data = {
         allItems: {
@@ -73,7 +84,10 @@ var budgetController = (function() {
         totals: {
             exp: 0,
             inc: 0
-        }      
+        },
+        budget: 0,
+        percentage: -1 // minus 1 is usually a value to say that something is nonexistent. So if there
+                        // are no budget values and no total expenses or incomes, there cannot be a percentage
     };
 
     return {
@@ -101,6 +115,49 @@ var budgetController = (function() {
 
             // return the new element
             return newItem;
+        },
+
+        deleteItem: function(type, id) {
+
+            var ids, index;
+
+            ids = data.allItems[type].map(function(current) {
+                // map returns a new array
+                return current.id;
+            })
+
+            index = ids.indexOf(id);
+
+            if (index !== -1) {
+                data.allItems[type].splice(index, 1)
+            }
+
+        },
+
+        calculateBudget: function() {
+
+            // calculate total income and expenses
+            calculateTotal('exp');
+            calculateTotal('inc');
+
+            // calculate the budget: income - expenses
+            data.budget = data.totals.inc - data.totals.exp;
+
+            // calculate the percentage of income that we spent
+            if (data.totals.inc > 0) {
+            data.percentage = Math.round((data.totals.exp / data.totals.inc) * 100);
+            } else {
+                data.percentage = -1;
+            }
+        },
+
+        getBudget: function() {
+            return {
+                budget: data.budget,
+                totalInc: data.totals.inc,
+                totalExp: data.totals.exp,
+                percentage: data.percentage
+            }
         }
     };
    
@@ -118,7 +175,12 @@ var UIController = (function() {
         inputValue: '.add__value',
         inputBtn: '.add__btn',
         incomeContainer: '.income__list',
-        expensesContainer: '.expenses__list'
+        expensesContainer: '.expenses__list',
+        budgetLabel: '.budget__value',
+        incomeLabel: '.budget__income--value',
+        expensesLabel: '.budget__expenses--value',
+        percentageLabel: '.budget__expenses--percentage',
+        container: '.container'
     }
 
 
@@ -128,7 +190,8 @@ var UIController = (function() {
             return {
                 type: document.querySelector(DOMstrings.inputType).value,// will be inc or exp
                 description: document.querySelector(DOMstrings.inputDescription).value,
-                value: document.querySelector(DOMstrings.inputValue).value
+                value: parseFloat(document.querySelector(DOMstrings.inputValue).value)
+                //parseFloat converts a string to a floating number
             };
 
         },
@@ -180,6 +243,20 @@ var UIController = (function() {
             })
             fieldsArr[0].focus(); //puts the cursor focus on the inputDescription field
         },
+
+        displayBudget: function (obj) {
+
+            document.querySelector(DOMstrings.budgetLabel).textContent = obj.budget;
+            document.querySelector(DOMstrings.incomeLabel).textContent = obj.totalInc;
+            document.querySelector(DOMstrings.expensesLabel).textContent = obj.totalExp;
+           
+
+            if (obj.percentage > 0) {
+                document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage + '%';
+            } else {
+                document.querySelector(DOMstrings.percentageLabel).textContent = '---';
+            }   
+        },
           
         getDOMstrings: function() {
             return DOMstrings
@@ -211,31 +288,75 @@ var controller = (function(budgetCtrl, UICtrl) {
         }
 
         })
+
+        document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem)
     };
 
+    
+    var updateBudget = function() {
+
+        //1. calculate the budget
+        budgetCtrl.calculateBudget();
+        //2. return the budget
+        var budget = budgetCtrl.getBudget();
+       //3. display the budget on the UI
+        UICtrl.displayBudget(budget);
+    }
+    
+    
+    
+    
     var ctrlAddItem = function() {
         var input, newItem;
         //1. get field input data
         input = UICtrl.getInput();
-
+        
+        if (input.description !== '' && !isNaN(input.value) && input.value> 0)  { // !isNaN means it is not not a number meaning it is a number
        //2. add item to budget controller
        newItem = budgetCtrl.addItem(input.type, input.description, input.value);
 
        //3. add the item to the UI
        UICtrl.addListItem(newItem, input.type);
 
-       // clear the fields
+       // 4. clear the fields
        UICtrl.clearFields();
 
-       //4. calculate the budget
+       // 5. Calculate and update budget
+       updateBudget();
+    }
 
-       //4. display the budget on the UI
+   };
 
+   var ctrlDeleteItem = function(event) {
+       var itemID, splitID, type, ID;
+
+       itemID = event.target.parentNode.parentNode.parentNode.parentNode.id;
+
+       if(itemID) {
+
+           splitID = itemID.split('-'); //splits string into an array with 2 elements
+           type = splitID[0];
+           ID = parseInt(splitID[1]);  //need to convert string to a number
+
+
+           // delete the item from the data structure
+            budgetCtrl.deleteItem(type, ID);
+           // delete the item from the UI
+
+
+           // update and show the new budget
+       }
    }
 
     return {
         init: function() {
             console.log('application has started');
+            UICtrl.displayBudget({
+                budget: 0,
+                totalInc: 0,
+                totalExp: 0,
+                percentage: -1
+            });
             setupEventListeners();
         }
     };
